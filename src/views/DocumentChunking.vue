@@ -175,6 +175,10 @@
             <span class="stat-label">分块配置</span>
             <span class="stat-value">{{ chunkStats.chunk_size }}/{{ chunkStats.overlap }}</span>
           </div>
+          <div class="stat-item">
+            <span class="stat-label">文档分类</span>
+            <span class="stat-value">{{ chunkStats.category || '未分类' }}</span>
+          </div>
         </div>
 
         <div class="chunks-list">
@@ -382,7 +386,8 @@ const chunkStats = ref({
   total_chunks: 0,
   total_chars: 0,
   chunk_size: 500,
-  overlap: 50
+  overlap: 50,
+  category: ''
 })
 
 const chunkConfig = ref({
@@ -557,7 +562,8 @@ const handleConfigConfirm = async () => {
       total_chunks: response.total_chunks,
       total_chars: response.total_chars,
       chunk_size: response.chunk_size,
-      overlap: response.overlap
+      overlap: response.overlap,
+      category: response.category
     }
 
     ElMessage.success(`分块成功！共产生 ${response.total_chunks} 个分块`)
@@ -1068,14 +1074,26 @@ const simulateProgress = (callback, type = 'chunk') => {
 /* 预览统计 */
 .preview-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 32px;
+}
+
+@media (max-width: 1200px) {
+  .preview-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 1024px) {
   .preview-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .preview-stats {
+    grid-template-columns: 1fr;
   }
 }
 
