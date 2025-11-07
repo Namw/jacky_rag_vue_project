@@ -27,30 +27,27 @@
             style="width: 100%"
             stripe
           >
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="title" label="文档标题" min-width="200" />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="id" label="文档ID" width="120" show-overflow-tooltip />
+            <el-table-column prop="title" label="文档标题" min-width="150" />
+            <el-table-column prop="category" label="分类" width="120" />
+            <el-table-column prop="chunkCount" label="分块数" width="80" align="center" />
+            <el-table-column prop="status" label="状态" width="80" align="center">
               <template #default="{ row }">
                 <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="chunkCount" label="分块数" width="100" />
-            <el-table-column prop="createdAt" label="创建时间" width="180">
-              <template #default="{ row }">
-                {{ formatDate(row.createdAt) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" align="center" fixed="right">
+            <el-table-column label="操作" width="220" align="center" fixed="right">
               <template #default="{ row }">
                 <router-link
                   :to="`/permanent-document/${row.id}`"
                   class="action-link"
                 >
-                  <el-button type="primary" link>查看详情</el-button>
+                  <el-button type="primary" link size="small">查看详情</el-button>
                 </router-link>
                 <el-button
                   type="danger"
                   link
+                  size="small"
                   @click="deleteDocument(row.id)"
                 >
                   删除
@@ -75,8 +72,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElTag, ElInput, ElLoading, ElAlert, ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request'
 import Layout from '@/components/Layout.vue'
+import { getCollectionsList, deleteDocument as deleteDocumentApi } from '@/api/document'
 
 const documents = ref([])
 const searchQuery = ref('')
@@ -92,16 +89,6 @@ const filteredDocuments = computed(() => {
   )
 })
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 const getStatusType = (status) => {
   const statusMap = {
     'pending': 'warning',
@@ -116,10 +103,18 @@ const fetchDocuments = async () => {
   loading.value = true
   error.value = null
   try {
-    // 获取所有已入库的文档
-    const response = await request.post('/api/documents/permanent')
-    // response 已经是 data 对象（通过拦截器处理）
-    documents.value = response || []
+    // 获取集合列表
+    const response = await getCollectionsList()
+    // 将集合数据转换为表格格式
+    documents.value = (response.collections || []).map(collection => ({
+      id: collection.document_id,
+      title: collection.category || collection.collection_name,
+      category: collection.category,
+      chunkCount: collection.chunk_count,
+      collectionName: collection.collection_name,
+      status: 'completed',
+      createdAt: new Date().toISOString()
+    }))
   } catch (err) {
     error.value = '加载文档失败：' + (err.message || '未知错误')
   } finally {
@@ -143,7 +138,7 @@ const deleteDocument = async (documentId) => {
         type: 'warning'
       }
     )
-    await request.delete(`/api/documents/${documentId}`)
+    await deleteDocumentApi(documentId)
     ElMessage.success('删除成功')
     await fetchDocuments()
   } catch (err) {

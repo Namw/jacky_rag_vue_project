@@ -124,3 +124,11 @@ export const getPermanentDocument = async (documentId, page = 1, pageSize = 10) 
 export const listDocuments = async () => {
   return await request.get('/api/documents')
 }
+
+/**
+ * 获取集合列表
+ * @returns {Promise<Object>} 返回集合列表，包含 total、collections 和 timestamp
+ */
+export const getCollectionsList = async () => {
+  return await request.get('/api/collections/list')
+}
