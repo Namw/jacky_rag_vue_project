@@ -2,9 +2,10 @@
   <Layout>
     <div class="permanent-document">
       <div class="header">
-        <h1>正式库文档 - {{ documentId }}</h1>
+        <h1>{{ documentData?.category || '文档' }} - {{ documentId }}</h1>
         <div class="meta-info" v-if="documentData">
-          <span class="collection">集合: {{ documentData.permanent_collection_name }}</span>
+          <span class="collection">集合: {{ documentData.collection_name }}</span>
+          <span class="category">分类: {{ documentData.category }}</span>
           <span class="total">总分块数: {{ documentData.total_chunks }}</span>
         </div>
       </div>
@@ -13,7 +14,7 @@
 
       <div class="content-section" v-if="documentData && !loading">
         <div class="chunks-section">
-          <h2>文档分块（{{ chunks.length }}/{{ documentData.total_chunks }}）</h2>
+          <h2>文本块列表（第 {{ currentPage }} 页，共 {{ documentData.total_pages }} 页）</h2>
           <div class="chunks-list" v-if="chunks.length">
             <div
               v-for="chunk in chunks"
@@ -35,7 +36,7 @@
           </div>
 
           <!-- 分页控件 -->
-          <div class="pagination-section" v-if="documentData && documentData.total_chunks > 0">
+          <div class="pagination-section" v-if="documentData && documentData.total_pages > 1">
             <el-pagination
               v-model:current-page="currentPage"
               v-model:page-size="pageSize"
@@ -59,8 +60,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElLoading, ElAlert, ElPagination } from 'element-plus'
-import request from '@/utils/request'
 import Layout from '@/components/Layout.vue'
+import { getCollectionDetail } from '@/api/document'
 
 const route = useRoute()
 const documentId = ref('')
@@ -76,14 +77,10 @@ const fetchDocument = async () => {
   loading.value = true
   error.value = null
   try {
-    const response = await request.get(
-      `/api/documents/${documentId.value}/permanent`,
-      {
-        params: {
-          page: currentPage.value,
-          page_size: pageSize.value
-        }
-      }
+    const response = await getCollectionDetail(
+      documentId.value,
+      currentPage.value,
+      pageSize.value
     )
     // 处理API响应 - response已经是data对象（通过拦截器处理）
     documentData.value = response || {}

@@ -143,3 +143,16 @@ export const listDocuments = async () => {
 export const getCollectionsList = async () => {
   return await request.get('/api/collections/list')
 }
+
+/**
+ * 获取集合详情（分页获取文本块）
+ * @param {string} documentId - 文档 ID
+ * @param {number} page - 页码，默认 1
+ * @param {number} pageSize - 每页数量，默认 10，范围 1-50
+ * @returns {Promise<Object>} 返回集合详情，包含分块列表和分页信息
+ */
+export const getCollectionDetail = async (documentId, page = 1, pageSize = 10) => {
+  return await request.get(`/api/collections/detail/${documentId}`, {
+    params: { page, page_size: pageSize }
+  })
+}
