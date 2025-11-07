@@ -21,11 +21,11 @@
             <h3>文档分块</h3>
             <p>上传文档并配置分块参数</p>
           </router-link>
-          <div class="link-card disabled">
+          <router-link to="/rag-qa" class="link-card">
             <span class="icon">💬</span>
             <h3>RAG问答</h3>
             <p>基于已上传文档的智能问答</p>
-          </div>
+          </router-link>
         </div>
       </div>
     </div>

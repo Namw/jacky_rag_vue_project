@@ -102,6 +102,14 @@
                   </el-checkbox>
                 </label>
               </div>
+              <div class="param-item">
+                <label>
+                  <el-checkbox v-model="useRerank" :disabled="isQuerying">
+                    启用二次精排
+                  </el-checkbox>
+                </label>
+                <p class="param-hint">使用 Reranker 模型进行精排以提高结果质量</p>
+              </div>
             </div>
 
             <div class="submit-button">
@@ -202,6 +210,7 @@ const modelError = ref(null)
 const queryText = ref('')
 const topK = ref(5)
 const returnSources = ref(true)
+const useRerank = ref(false)
 const queryResult = ref(null)
 const queryError = ref(null)
 
@@ -299,7 +308,10 @@ const handleQuery = async () => {
     const response = await queryRag(
       queryText.value,
       topK.value,
-      returnSources.value
+      returnSources.value,
+      null,
+      null,
+      useRerank.value
     )
 
     queryResult.value = response
@@ -528,6 +540,13 @@ onMounted(() => {
 
 .param-item :deep(.el-checkbox) {
   font-size: 13px;
+}
+
+.param-hint {
+  font-size: 12px;
+  color: #999;
+  margin: 0;
+  padding-top: 2px;
 }
 
 .submit-button {

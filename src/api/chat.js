@@ -29,13 +29,15 @@ export const switchModel = async (provider, temperature = null) => {
  * @param {boolean} returnSources - 是否返回来源，默认 true
  * @param {Object} filterDict - 元数据过滤条件，可选
  * @param {string} systemPrompt - 自定义系统提示词，可选
+ * @param {boolean} useRerank - 是否启用二次精排，默认 false
  * @returns {Promise<Object>} 返回问答结果
  */
-export const queryRag = async (question, topK = 5, returnSources = true, filterDict = null, systemPrompt = null) => {
+export const queryRag = async (question, topK = 5, returnSources = true, filterDict = null, systemPrompt = null, useRerank = false) => {
   const payload = {
     question,
     top_k: topK,
-    return_sources: returnSources
+    return_sources: returnSources,
+    use_rerank: useRerank
   }
 
   if (filterDict !== null && filterDict !== undefined) {
