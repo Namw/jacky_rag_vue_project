@@ -25,12 +25,23 @@ export const getDocuments = async () => {
 }
 
 /**
- * 删除文档
+ * 删除文档（旧 API）
  * @param {string} documentId - 文档 ID
  * @returns {Promise<Object>} 返回删除结果
  */
 export const deleteDocument = async (documentId) => {
   return await request.delete(`/api/documents/${documentId}`)
+}
+
+/**
+ * 删除集合（从文档库）
+ * @param {string} documentId - 文档 ID
+ * @returns {Promise<Object>} 返回删除结果，包含删除信息和统计
+ */
+export const deleteCollection = async (documentId) => {
+  return await request.delete('/api/collections/delete', {
+    data: { document_id: documentId }
+  })
 }
 
 /**

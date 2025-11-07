@@ -73,7 +73,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElTag, ElInput, ElLoading, ElAlert, ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '@/components/Layout.vue'
-import { getCollectionsList, deleteDocument as deleteDocumentApi } from '@/api/document'
+import { getCollectionsList, deleteCollection } from '@/api/document'
 
 const documents = ref([])
 const searchQuery = ref('')
@@ -138,7 +138,7 @@ const deleteDocument = async (documentId) => {
         type: 'warning'
       }
     )
-    await deleteDocumentApi(documentId)
+    await deleteCollection(documentId)
     ElMessage.success('删除成功')
     await fetchDocuments()
   } catch (err) {
