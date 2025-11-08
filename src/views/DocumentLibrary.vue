@@ -36,13 +36,22 @@
                 <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="220" align="center" fixed="right">
+            <el-table-column label="操作" width="300" align="center" fixed="right">
               <template #default="{ row }">
                 <router-link
                   :to="`/permanent-document/${row.id}`"
                   class="action-link"
                 >
                   <el-button type="primary" link size="small">查看详情</el-button>
+                </router-link>
+                <router-link
+                  :to="{
+                    path: `/collection-search/${row.id}`,
+                    params: { documentId: row.id, category: row.category }
+                  }"
+                  class="action-link"
+                >
+                  <el-button type="info" link size="small">检索</el-button>
                 </router-link>
                 <el-button
                   type="danger"

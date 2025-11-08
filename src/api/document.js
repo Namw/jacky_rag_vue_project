@@ -156,3 +156,27 @@ export const getCollectionDetail = async (documentId, page = 1, pageSize = 10) =
     params: { page, page_size: pageSize }
   })
 }
+
+/**
+ * 集合检索
+ * @param {string} documentId - 文档 ID
+ * @param {string} query - 检索问题
+ * @param {number} topK - 返回结果数量，默认 5，范围 1-20
+ * @param {number} threshold - 相似度阈值，默认 null
+ * @param {boolean} useRerank - 是否启用二次精排，默认 false
+ * @returns {Promise<Object>} 返回检索结果
+ */
+export const searchCollection = async (documentId, query, topK = 5, threshold = null, useRerank = false) => {
+  const payload = {
+    query,
+    top_k: topK,
+    use_rerank: useRerank
+  }
+
+  // 只有当 threshold 被显式指定且不为 null 时才添加
+  if (threshold !== null && threshold !== undefined) {
+    payload.threshold = threshold
+  }
+
+  return await request.post(`/api/collections/search/${documentId}`, payload)
+}
