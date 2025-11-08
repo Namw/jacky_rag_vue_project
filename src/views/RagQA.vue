@@ -58,6 +58,55 @@
         </div>
       </div>
 
+      <!-- 缓存统计 -->
+      <div class="cache-section">
+        <div class="cache-card">
+          <div class="cache-header">
+            <h3>语义缓存统计</h3>
+            <div class="cache-controls">
+              <el-button
+                type="primary"
+                size="small"
+                :loading="isLoadingCache"
+                @click="loadCacheStats"
+              >
+                刷新
+              </el-button>
+              <el-button
+                type="danger"
+                size="small"
+                :loading="isClearingCache"
+                @click="handleClearCache"
+              >
+                清空缓存
+              </el-button>
+            </div>
+          </div>
+
+          <div v-if="cacheStats && !cacheStats.error" class="cache-stats">
+            <div class="stat-item">
+              <span class="stat-label">总缓存查询数</span>
+              <span class="stat-value">{{ cacheStats.total_cached_queries }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">使用 Rerank 缓存</span>
+              <span class="stat-value">{{ cacheStats.rerank_cached }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">普通检索缓存</span>
+              <span class="stat-value">{{ cacheStats.normal_cached }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">缓存范围数</span>
+              <span class="stat-value">{{ cacheStats.cache_scopes }}</span>
+            </div>
+          </div>
+          <div v-else class="cache-empty">
+            <p>{{ cacheStats?.error || '缓存未初始化' }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- 加载状态 -->
       <div v-if="isLoadingModels" class="loading-container">
         <el-empty description="正在加载模型信息..." />
@@ -190,10 +239,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '@/components/Layout.vue'
-import { getModelInfo, switchModel, queryRag } from '@/api/chat'
+import { getModelInfo, switchModel, queryRag, getCacheStats, clearCache } from '@/api/chat'
 
 // 页面数据
 const isLoadingModels = ref(true)
@@ -213,6 +262,12 @@ const returnSources = ref(true)
 const useRerank = ref(false)
 const queryResult = ref(null)
 const queryError = ref(null)
+
+// 缓存相关
+const cacheStats = ref(null)
+const isLoadingCache = ref(false)
+const isClearingCache = ref(false)
+let cacheStatsInterval = null
 
 // 时间格式化
 const formatTime = (timestamp) => {
@@ -333,9 +388,67 @@ const clearResult = () => {
   queryText.value = ''
 }
 
-// 页面加载时获取模型信息
+// 获取缓存统计
+const loadCacheStats = async () => {
+  isLoadingCache.value = true
+  try {
+    const response = await getCacheStats()
+    cacheStats.value = response
+  } catch (error) {
+    console.error('获取缓存统计失败:', error)
+    cacheStats.value = null
+  } finally {
+    isLoadingCache.value = false
+  }
+}
+
+// 清空所有缓存
+const handleClearCache = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要清空所有语义缓存吗？此操作不可撤销。',
+      '清空缓存',
+      {
+        confirmButtonText: '清空',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    isClearingCache.value = true
+    await clearCache()
+    ElMessage.success('缓存已清空')
+    await loadCacheStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      const errorMsg = error.response?.data?.detail || error.message || '清空缓存失败'
+      if (errorMsg.includes('Admin only')) {
+        ElMessage.error('只有管理员可以清空缓存')
+      } else {
+        ElMessage.error(errorMsg)
+      }
+    }
+  } finally {
+    isClearingCache.value = false
+  }
+}
+
+// 页面加载时获取模型信息和缓存统计
 onMounted(() => {
   loadModelInfo()
+  loadCacheStats()
+
+  // 每30秒更新一次缓存统计
+  cacheStatsInterval = setInterval(() => {
+    loadCacheStats()
+  }, 30000)
+})
+
+// 页面卸载时清空定时器
+onBeforeUnmount(() => {
+  if (cacheStatsInterval) {
+    clearInterval(cacheStatsInterval)
+  }
 })
 </script>
 
@@ -725,5 +838,74 @@ onMounted(() => {
   border-radius: 8px;
   padding: 60px 20px;
   text-align: center;
+}
+
+/* 缓存统计区域 */
+.cache-section {
+  margin-bottom: 40px;
+}
+
+.cache-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cache-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cache-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.cache-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.cache-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.cache-empty {
+  text-align: center;
+  padding: 30px 20px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  color: #999;
 }
 </style>

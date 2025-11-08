@@ -50,3 +50,24 @@ export const queryRag = async (question, topK = 5, returnSources = true, filterD
 
   return await request.post('/api/chat/query', payload)
 }
+
+/**
+ * 获取缓存统计
+ * @returns {Promise<Object>} 返回缓存统计信息
+ */
+export const getCacheStats = async () => {
+  return await request.get('/api/chat/cache/stats')
+}
+
+/**
+ * 清空缓存
+ * @param {string} documentId - 文档ID，不传则清空所有缓存
+ * @returns {Promise<Object>} 返回清空结果
+ */
+export const clearCache = async (documentId = null) => {
+  const params = {}
+  if (documentId !== null && documentId !== undefined) {
+    params.document_id = documentId
+  }
+  return await request.delete('/api/chat/cache/clear', { params })
+}
