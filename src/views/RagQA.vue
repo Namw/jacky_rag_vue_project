@@ -249,7 +249,10 @@
         <div v-if="queryResult" class="result-card">
           <div class="result-header">
             <h3>问答结果</h3>
-            <span class="result-time">{{ formatTime(queryResult.timestamp) }}</span>
+            <div class="result-meta">
+              <span class="result-time">{{ formatTime(queryResult.timestamp) }}</span>
+              <span v-if="queryResult.elapsedTime" class="elapsed-time">耗时：{{ queryResult.elapsedTime }}s</span>
+            </div>
           </div>
 
           <!-- 问题显示 -->
@@ -336,6 +339,7 @@ const systemPrompt = ref('')
 const documentId = ref('')
 const queryResult = ref(null)
 const queryError = ref(null)
+const queryStartTime = ref(null) // 记录查询开始时间
 
 // 缓存相关
 const cacheStats = ref(null)
@@ -447,6 +451,7 @@ const handleQuery = async () => {
 
   isQuerying.value = true
   queryError.value = null
+  queryStartTime.value = Date.now() // 记录查询开始时间
 
   try {
     ElMessage.info('正在查询...')
@@ -461,7 +466,13 @@ const handleQuery = async () => {
       threshold.value
     )
 
-    queryResult.value = response
+    // 计算耗时（毫秒转秒，保留2位小数）
+    const elapsedTime = ((Date.now() - queryStartTime.value) / 1000).toFixed(2)
+
+    queryResult.value = {
+      ...response,
+      elapsedTime: parseFloat(elapsedTime)
+    }
     ElMessage.success('查询成功')
   } catch (error) {
     console.error('查询失败:', error)
@@ -876,9 +887,24 @@ onBeforeUnmount(() => {
   color: #1a1a1a;
 }
 
+.result-meta {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
 .result-time {
   font-size: 12px;
   color: #999;
+}
+
+.elapsed-time {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: #f0f5ff;
+  border-radius: 4px;
 }
 
 .question-display {
