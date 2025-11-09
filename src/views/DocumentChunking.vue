@@ -584,7 +584,21 @@ const handleUploadConfirm = async () => {
     // 保存上传后的文档信息
     uploadedDocument.value = response
 
-    ElMessage.success(`文档上传成功！共 ${response.page_count} 页`)
+    // 更新使用统计信息（上传成功后更新）
+    usageStats.value = {
+      upload_count: response.upload_count,
+      upload_limit: response.upload_limit,
+      upload_remaining: response.upload_remaining,
+      // 保留原有的查询统计信息
+      ...(usageStats.value ? {
+        query_count: usageStats.value.query_count,
+        query_limit: usageStats.value.query_limit,
+        query_remaining: usageStats.value.query_remaining,
+        next_reset_time: usageStats.value.next_reset_time
+      } : {})
+    }
+
+    ElMessage.success(`文档上传成功！共 ${response.page_count} 页，剩余上传次数：${response.upload_remaining}`)
 
     // 跳转到配置页面
     currentStep.value = 'config'
@@ -592,7 +606,10 @@ const handleUploadConfirm = async () => {
     console.error('文档上传失败:', error)
 
     // 处理特定错误
-    if (error.response?.status === 400) {
+    if (error.response?.status === 429) {
+      // 上传次数已达上限
+      ElMessage.error(error.response?.data?.detail || '今日上传次数已达上限，请明天重试')
+    } else if (error.response?.status === 400) {
       ElMessage.error(error.response?.data?.detail || '文件格式或大小错误')
     } else if (error.response?.status === 401) {
       ElMessage.error('未授权，请重新登录')
