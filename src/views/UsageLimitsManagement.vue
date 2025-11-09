@@ -76,7 +76,7 @@
             <span>下次重置时间：{{ formatTime(currentLimits.reset_time) }}</span>
           </div>
 
-          <div v-if="!isAuthenticated && isAdmin" class="auth-prompt">
+          <div v-if="!isAuthenticated" class="auth-prompt">
             <el-button type="primary" @click="openAuthDialog">
               🔐 点击此处验证身份以进行修改
             </el-button>
