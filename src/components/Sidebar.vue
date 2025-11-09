@@ -39,6 +39,18 @@
           <span class="text">文档库</span>
         </button>
       </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">设置</div>
+        <router-link
+          to="/usage-limits"
+          class="nav-item"
+          :class="{ active: isActive('/usage-limits') }"
+        >
+          <span class="icon">⚙️</span>
+          <span class="text">使用限额管理</span>
+        </router-link>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button @click="logout" class="logout-btn">

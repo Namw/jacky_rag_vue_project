@@ -6,6 +6,7 @@ import RagQA from '@/views/RagQA.vue'
 import PermanentDocumentView from '@/views/PermanentDocumentView.vue'
 import DocumentLibrary from '@/views/DocumentLibrary.vue'
 import CollectionSearch from '@/views/CollectionSearch.vue'
+import UsageLimitsManagement from '@/views/UsageLimitsManagement.vue'
 
 const routes = [
   { path: '/login', component: Login },
@@ -14,7 +15,8 @@ const routes = [
   { path: '/rag-qa', component: RagQA, meta: { requiresAuth: true } },
   { path: '/document-library', component: DocumentLibrary, meta: { requiresAuth: true } },
   { path: '/permanent-document/:documentId', name: 'PermanentDocument', component: PermanentDocumentView, meta: { requiresAuth: true } },
-  { path: '/collection-search/:documentId', name: 'CollectionSearch', component: CollectionSearch, meta: { requiresAuth: true } }
+  { path: '/collection-search/:documentId', name: 'CollectionSearch', component: CollectionSearch, meta: { requiresAuth: true } },
+  { path: '/usage-limits', component: UsageLimitsManagement }
 ]
 
 const router = createRouter({
