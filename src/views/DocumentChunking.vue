@@ -35,6 +35,60 @@
           </div>
         </div>
 
+        <!-- 使用统计卡片 -->
+        <div class="usage-stats-card" v-if="usageStats">
+          <div class="stats-header">
+            <h3>每日使用统计</h3>
+            <span class="stats-refresh" v-if="loadingStats">加载中...</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stats-item">
+              <div class="stat-title">文档上传</div>
+              <div class="stat-content">
+                <span class="stat-number">{{ usageStats.upload_remaining || 0 }}</span>
+                <span class="stat-unit">/ {{ usageStats.upload_limit || 0 }}</span>
+              </div>
+              <div class="stat-bar">
+                <div
+                  class="stat-progress"
+                  :style="{
+                    width: ((usageStats.upload_remaining || 0) / (usageStats.upload_limit || 1)) * 100 + '%',
+                    backgroundColor: (usageStats.upload_remaining || 0) > 0 ? '#52c41a' : '#f5222d'
+                  }"
+                ></div>
+              </div>
+              <div class="stat-description">
+                已用 {{ usageStats.upload_count || 0 }} 次，剩余 {{ usageStats.upload_remaining || 0 }} 次
+              </div>
+            </div>
+
+            <div class="stats-item">
+              <div class="stat-title">问题查询</div>
+              <div class="stat-content">
+                <span class="stat-number">{{ usageStats.query_remaining || 0 }}</span>
+                <span class="stat-unit">/ {{ usageStats.query_limit || 0 }}</span>
+              </div>
+              <div class="stat-bar">
+                <div
+                  class="stat-progress"
+                  :style="{
+                    width: ((usageStats.query_remaining || 0) / (usageStats.query_limit || 1)) * 100 + '%',
+                    backgroundColor: (usageStats.query_remaining || 0) > 0 ? '#667eea' : '#f5222d'
+                  }"
+                ></div>
+              </div>
+              <div class="stat-description">
+                已用 {{ usageStats.query_count || 0 }} 次，剩余 {{ usageStats.query_remaining || 0 }} 次
+              </div>
+            </div>
+          </div>
+          <div class="stats-footer">
+            <span class="reset-time">
+              下次重置: {{ usageStats.next_reset_time || '未知' }}
+            </span>
+          </div>
+        </div>
+
         <!-- 已选择文件展示 -->
         <div class="selected-files" v-if="selectedFile">
           <div class="file-item">
@@ -356,11 +410,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import Layout from '@/components/Layout.vue'
-import { uploadDocument, chunkDocument, vectorizeDocument, searchDocument, confirmDocument } from '@/api/document'
+import { uploadDocument, chunkDocument, vectorizeDocument, searchDocument, confirmDocument, getUsageStats } from '@/api/document'
 
 const router = useRouter()
 
@@ -377,6 +431,11 @@ const showConfirmDialog = ref(false)
 const searchTopK = ref(5)
 const searchThreshold = ref(0.5)
 const useRerank = ref(false)
+
+// 用户使用统计
+const usageStats = ref(null)
+const loadingStats = ref(false)
+let statsRefreshInterval = null
 
 // 保存上传成功后的文档信息
 const uploadedDocument = ref(null)
@@ -411,6 +470,19 @@ const avgChunkSize = computed(() => {
   return Math.round(total / mockChunks.value.length)
 })
 
+const loadUsageStats = async () => {
+  loadingStats.value = true
+  try {
+    const response = await getUsageStats()
+    usageStats.value = response
+  } catch (error) {
+    console.error('获取使用统计失败:', error)
+    // 静默失败，不显示错误提示
+  } finally {
+    loadingStats.value = false
+  }
+}
+
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -418,6 +490,23 @@ const formatFileSize = (bytes) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
+
+// 组件挂载时加载使用统计，并设置定时刷新
+onMounted(() => {
+  loadUsageStats()
+
+  // 每 30 秒刷新一次使用统计
+  statsRefreshInterval = setInterval(() => {
+    loadUsageStats()
+  }, 30000)
+})
+
+// 组件卸载时清除定时器
+onBeforeUnmount(() => {
+  if (statsRefreshInterval) {
+    clearInterval(statsRefreshInterval)
+  }
+})
 
 const handleFileDrop = (e) => {
   const files = e.dataTransfer.files
@@ -1594,5 +1683,117 @@ const simulateProgress = (callback, type = 'chunk') => {
 .dialog-footer .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 使用统计卡片 */
+.usage-stats-card {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.stats-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.stats-refresh {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stats-item {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.stat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-content {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.stat-unit {
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+}
+
+.stat-bar {
+  width: 100%;
+  height: 6px;
+  background: #e8e8e8;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.stat-progress {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stat-description {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.stats-footer {
+  text-align: right;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.reset-time {
+  font-size: 12px;
+  color: #999;
 }
 </style>

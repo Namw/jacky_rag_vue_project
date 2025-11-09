@@ -180,3 +180,11 @@ export const searchCollection = async (documentId, query, topK = 5, threshold = 
 
   return await request.post(`/api/collections/search/${documentId}`, payload)
 }
+
+/**
+ * 获取用户使用统计
+ * @returns {Promise<Object>} 返回用户使用统计，包括上传和查询的限制及剩余次数
+ */
+export const getUsageStats = async () => {
+  return await request.get('/api/usage/stats')
+}
