@@ -145,6 +145,30 @@
                 />
               </div>
               <div class="param-item">
+                <label>相似度阈值</label>
+                <div class="threshold-control">
+                  <el-slider
+                    v-model="threshold"
+                    :min="0"
+                    :max="1"
+                    :step="0.1"
+                    :disabled="isQuerying"
+                    show-stops
+                  />
+                  <span class="threshold-value">{{ threshold.toFixed(1) }}</span>
+                </div>
+                <p class="param-hint">返回相似度大于该值的结果（推荐 0.6-0.8）</p>
+              </div>
+              <div class="param-item">
+                <label>指定文档 ID</label>
+                <el-input
+                  v-model="documentId"
+                  placeholder="留空则检索所有文档"
+                  :disabled="isQuerying"
+                />
+                <p class="param-hint">可选，指定在某个文档中检索</p>
+              </div>
+              <div class="param-item">
                 <label>
                   <el-checkbox v-model="returnSources" :disabled="isQuerying">
                     返回来源
@@ -159,6 +183,18 @@
                 </label>
                 <p class="param-hint">使用 Reranker 模型进行精排以提高结果质量</p>
               </div>
+            </div>
+
+            <div class="system-prompt">
+              <label>自定义系统提示词（可选）</label>
+              <el-input
+                v-model="systemPrompt"
+                type="textarea"
+                :rows="2"
+                placeholder="自定义系统提示词，如不填写使用默认值"
+                :disabled="isQuerying"
+              />
+              <p class="param-hint">用于指导 AI 如何生成答案</p>
             </div>
 
             <div class="submit-button">
@@ -260,6 +296,9 @@ const queryText = ref('')
 const topK = ref(5)
 const returnSources = ref(true)
 const useRerank = ref(false)
+const threshold = ref(0.6)
+const systemPrompt = ref('')
+const documentId = ref('')
 const queryResult = ref(null)
 const queryError = ref(null)
 
@@ -365,17 +404,28 @@ const handleQuery = async () => {
       topK.value,
       returnSources.value,
       null,
-      null,
-      useRerank.value
+      systemPrompt.value || null,
+      useRerank.value,
+      documentId.value || null,
+      threshold.value
     )
 
     queryResult.value = response
     ElMessage.success('查询成功')
   } catch (error) {
     console.error('查询失败:', error)
-    const errorMsg = error.response?.data?.detail || error.message || '查询失败，请稍后重试'
-    queryError.value = errorMsg
-    ElMessage.error(errorMsg)
+
+    // 处理特定错误
+    if (error.response?.status === 429) {
+      // 问答次数已达上限
+      const errorMsg = error.response?.data?.detail || '今日问答次数已达上限，请明天重试'
+      queryError.value = errorMsg
+      ElMessage.error(errorMsg)
+    } else {
+      const errorMsg = error.response?.data?.detail || error.message || '查询失败，请稍后重试'
+      queryError.value = errorMsg
+      ElMessage.error(errorMsg)
+    }
   } finally {
     isQuerying.value = false
   }
@@ -624,15 +674,26 @@ onBeforeUnmount(() => {
 
 .input-controls {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 16px;
 }
 
 .search-params {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
-  flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .search-params {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .search-params {
+    grid-template-columns: 1fr;
+  }
 }
 
 .param-item {
@@ -662,8 +723,47 @@ onBeforeUnmount(() => {
   padding-top: 2px;
 }
 
+.threshold-control {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.threshold-control :deep(.el-slider) {
+  flex: 1;
+}
+
+.threshold-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+  min-width: 40px;
+}
+
+.system-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.system-prompt label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.system-prompt :deep(.el-textarea) {
+  width: 100%;
+}
+
+.system-prompt :deep(.el-textarea__inner) {
+  font-size: 13px;
+  resize: none;
+}
+
 .submit-button {
-  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .submit-button :deep(.el-button) {

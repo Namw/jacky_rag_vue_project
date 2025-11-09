@@ -25,14 +25,25 @@ export const switchModel = async (provider, temperature = null) => {
 /**
  * RAG 问答查询
  * @param {string} question - 用户问题
- * @param {number} topK - 检索文档数量，默认 5
+ * @param {number} topK - 检索文档数量，默认 5，范围 1-20
  * @param {boolean} returnSources - 是否返回来源，默认 true
- * @param {Object} filterDict - 元数据过滤条件，可选
+ * @param {Object} filterDict - 元数据过滤条件，可选（已弃用）
  * @param {string} systemPrompt - 自定义系统提示词，可选
  * @param {boolean} useRerank - 是否启用二次精排，默认 false
- * @returns {Promise<Object>} 返回问答结果
+ * @param {string} documentId - 指定文档ID，为空则检索所有文档，可选
+ * @param {number} threshold - 相似度阈值，范围 0.0-1.0，可选
+ * @returns {Promise<Object>} 返回问答结果，包括 answer、sources、timestamp、model_provider
  */
-export const queryRag = async (question, topK = 5, returnSources = true, filterDict = null, systemPrompt = null, useRerank = false) => {
+export const queryRag = async (
+  question,
+  topK = 5,
+  returnSources = true,
+  filterDict = null,
+  systemPrompt = null,
+  useRerank = false,
+  documentId = null,
+  threshold = null
+) => {
   const payload = {
     question,
     top_k: topK,
@@ -40,12 +51,19 @@ export const queryRag = async (question, topK = 5, returnSources = true, filterD
     use_rerank: useRerank
   }
 
-  if (filterDict !== null && filterDict !== undefined) {
-    payload.filter_dict = filterDict
+  // 添加文档ID，如果指定
+  if (documentId !== null && documentId !== undefined) {
+    payload.document_id = documentId
   }
 
+  // 添加系统提示词，如果指定
   if (systemPrompt !== null && systemPrompt !== undefined) {
     payload.system_prompt = systemPrompt
+  }
+
+  // 添加相似度阈值，如果指定
+  if (threshold !== null && threshold !== undefined) {
+    payload.threshold = threshold
   }
 
   return await request.post('/api/chat/query', payload)
