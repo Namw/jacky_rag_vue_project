@@ -107,6 +107,40 @@
         </div>
       </div>
 
+      <!-- 使用统计（问答次数） -->
+      <div class="usage-section">
+        <div class="usage-card">
+          <div class="usage-header">
+            <h3>问答次数统计</h3>
+            <span class="usage-reset" v-if="usageStats && usageStats.next_reset_time">
+              重置时间：{{ formatTime(usageStats.next_reset_time) }}
+            </span>
+          </div>
+
+          <div v-if="usageStats && !usageStats.error" class="usage-stats">
+            <div class="quota-card">
+              <div class="quota-header">
+                <span class="quota-label">今日剩余提问次数</span>
+                <span class="quota-number">{{ usageStats.query_remaining }}/{{ usageStats.query_limit }}</span>
+              </div>
+              <div class="quota-progress">
+                <el-progress
+                  :percentage="Math.round((usageStats.query_remaining / usageStats.query_limit) * 100)"
+                  :color="getQuotaColor(usageStats.query_remaining, usageStats.query_limit)"
+                  :show-text="false"
+                />
+              </div>
+              <div class="quota-info">
+                <span class="info-text">已使用 {{ usageStats.query_limit - usageStats.query_remaining }} 次，还可提问 {{ usageStats.query_remaining }} 次</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="usage-empty">
+            <p>{{ usageStats?.error || '使用统计未初始化' }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- 加载状态 -->
       <div v-if="isLoadingModels" class="loading-container">
         <el-empty description="正在加载模型信息..." />
@@ -279,6 +313,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Layout from '@/components/Layout.vue'
 import { getModelInfo, switchModel, queryRag, getCacheStats, clearCache } from '@/api/chat'
+import { getUsageStats } from '@/api/document'
 
 // 页面数据
 const isLoadingModels = ref(true)
@@ -308,6 +343,10 @@ const isLoadingCache = ref(false)
 const isClearingCache = ref(false)
 let cacheStatsInterval = null
 
+// 使用统计相关（问答次数）
+const usageStats = ref(null)
+let usageStatsInterval = null
+
 // 时间格式化
 const formatTime = (timestamp) => {
   try {
@@ -322,6 +361,18 @@ const formatTime = (timestamp) => {
     })
   } catch {
     return timestamp
+  }
+}
+
+// 获取配额进度条颜色
+const getQuotaColor = (remaining, limit) => {
+  const percentage = (remaining / limit) * 100
+  if (percentage <= 20) {
+    return '#f56c6c' // 红色 - 紧急
+  } else if (percentage <= 50) {
+    return '#e6a23c' // 橙色 - 警告
+  } else {
+    return '#67c23a' // 绿色 - 充足
   }
 }
 
@@ -483,14 +534,30 @@ const handleClearCache = async () => {
   }
 }
 
-// 页面加载时获取模型信息和缓存统计
+// 获取使用统计（问答次数）
+const loadUsageStats = async () => {
+  try {
+    const response = await getUsageStats()
+    usageStats.value = response
+  } catch (error) {
+    console.error('获取使用统计失败:', error)
+    usageStats.value = null
+  }
+}
+
+// 页面加载时获取模型信息、缓存统计和使用统计
 onMounted(() => {
   loadModelInfo()
   loadCacheStats()
+  loadUsageStats()
 
-  // 每30秒更新一次缓存统计
+  // 每30秒更新一次缓存统计和使用统计
   cacheStatsInterval = setInterval(() => {
     loadCacheStats()
+  }, 30000)
+
+  usageStatsInterval = setInterval(() => {
+    loadUsageStats()
   }, 30000)
 })
 
@@ -498,6 +565,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (cacheStatsInterval) {
     clearInterval(cacheStatsInterval)
+  }
+  if (usageStatsInterval) {
+    clearInterval(usageStatsInterval)
   }
 })
 </script>
@@ -1002,6 +1072,100 @@ onBeforeUnmount(() => {
 }
 
 .cache-empty {
+  text-align: center;
+  padding: 30px 20px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  color: #999;
+}
+
+/* 使用统计区域 */
+.usage-section {
+  margin-bottom: 40px;
+}
+
+.usage-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.usage-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.usage-reset {
+  font-size: 12px;
+  color: #999;
+}
+
+.usage-stats {
+  display: flex;
+  flex-direction: column;
+}
+
+.quota-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border-left: 4px solid #667eea;
+}
+
+.quota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quota-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+}
+
+.quota-number {
+  font-size: 20px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.quota-progress {
+  display: flex;
+  align-items: center;
+}
+
+.quota-progress :deep(.el-progress) {
+  flex: 1;
+}
+
+.quota-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-text {
+  font-size: 12px;
+  color: #999;
+}
+
+.usage-empty {
   text-align: center;
   padding: 30px 20px;
   background: #f9f9f9;
