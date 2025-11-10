@@ -36,6 +36,16 @@
                 <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column prop="createdAt" label="上传时间" width="180" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ formatDateTime(row.createdAt) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="confirmedAt" label="入库时间" width="180" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ formatDateTime(row.confirmedAt) }}
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="300" align="center" fixed="right">
               <template #default="{ row }">
                 <router-link
@@ -108,6 +118,23 @@ const getStatusType = (status) => {
   return statusMap[status] || 'info'
 }
 
+const formatDateTime = (dateString) => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    return dateString
+  }
+}
+
 const fetchDocuments = async () => {
   loading.value = true
   error.value = null
@@ -122,7 +149,8 @@ const fetchDocuments = async () => {
       chunkCount: collection.chunk_count,
       collectionName: collection.collection_name,
       status: 'completed',
-      createdAt: new Date().toISOString()
+      createdAt: collection.created_at,
+      confirmedAt: collection.confirmed_at
     }))
   } catch (err) {
     error.value = '加载文档失败：' + (err.message || '未知错误')

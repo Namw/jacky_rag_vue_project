@@ -19,10 +19,15 @@ request.interceptors.request.use(config => {
 request.interceptors.response.use(
   response => response.data,
   error => {
-    if (error.response?.status === 401) {
+    // 管理员密码错误（401）不需要退出系统，由业务层处理
+    const isAdminPasswordError = error.config?.url?.includes('/api/usage/limits/update') ||
+                                  error.config?.url?.includes('/api/usage/reset')
+
+    if (error.response?.status === 401 && !isAdminPasswordError) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
+
     ElMessage.error(error.response?.data?.detail || '请求失败')
     return Promise.reject(error)
   }

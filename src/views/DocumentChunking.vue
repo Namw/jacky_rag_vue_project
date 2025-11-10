@@ -284,6 +284,22 @@
           <h2>检索体验</h2>
         </div>
 
+        <!-- 文档信息概览 -->
+        <div class="retrieval-doc-info" v-if="uploadedDocument">
+          <div class="doc-info-item">
+            <span class="doc-info-label">文档名称</span>
+            <span class="doc-info-value">{{ uploadedDocument.filename }}</span>
+          </div>
+          <div class="doc-info-item">
+            <span class="doc-info-label">文档分类</span>
+            <span class="doc-info-value category-badge">{{ chunkStats.category || '未分类' }}</span>
+          </div>
+          <div class="doc-info-item">
+            <span class="doc-info-label">分块统计</span>
+            <span class="doc-info-value">{{ chunkStats.total_chunks }} 个分块</span>
+          </div>
+        </div>
+
         <div class="search-section">
           <div class="search-params">
             <div class="param-group">
@@ -725,6 +741,11 @@ const startVectorization = async () => {
 
     clearInterval(progressInterval)
     vectorProgress.value = 100
+
+    // 从 vectorize API 响应中获取 category
+    if (response.category) {
+      chunkStats.value.category = response.category
+    }
 
     ElMessage.success(`向量化成功！共处理 ${response.total_chunks} 个文本块，嵌入维度 ${response.embedding_dim}`)
 
@@ -1263,6 +1284,54 @@ const simulateProgress = (callback, type = 'chunk') => {
   font-size: 13px;
   color: #555;
   line-height: 1.6;
+}
+
+/* 检索页面文档信息 */
+.retrieval-doc-info {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  color: white;
+}
+
+.doc-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  word-break: break-word;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  width: fit-content;
+}
+
+@media (max-width: 768px) {
+  .retrieval-doc-info {
+    flex-direction: column;
+    gap: 12px;
+  }
 }
 
 /* 搜索框 */
